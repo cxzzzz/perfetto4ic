@@ -26,8 +26,8 @@ export type time = Brand<bigint, 'time'>;
 export type duration = bigint;
 
 // The conversion factor for converting between different time units.
-const TIME_UNITS_PER_SEC = 1e9;
-const TIME_UNITS_PER_MILLISEC = 1e6;
+const TIME_UNITS_PER_SEC = 1e12;
+const TIME_UNITS_PER_MILLISEC = 1e9;
 
 export class Time {
   // Negative time is never found in a trace - so -1 is commonly used as a flag
@@ -187,14 +187,11 @@ export class Duration {
   // Print duration as as human readable string - i.e. to only a handful of
   // significant figues.
   // Use this when readability is more desireable than precision.
-  // Examples: 1234 -> 1.23ns
-  //           123456789 -> 123ms
-  //           123,123,123,123,123 -> 34h 12m
-  //           1,000,000,023 -> 1 s
-  //           1,230,000,023 -> 1.2 s
+  // Examples: 1234 -> 1.23ps
+  //           123456789 -> 123us
   static humanise(dur: duration) {
     const sec = Duration.toSeconds(dur);
-    const units = ['s', 'ms', 'us', 'ns'];
+    const units = ['s', 'ms', 'us', 'ns','ps'];
     const sign = Math.sign(sec);
     let n = Math.abs(sec);
     let u = 0;
@@ -210,12 +207,13 @@ export class Duration {
     let result = '';
     if (duration < 1) return '0s';
     const unitAndValue: [string, bigint][] = [
-      ['h', 3_600_000_000_000n],
-      ['m', 60_000_000_000n],
-      ['s', 1_000_000_000n],
-      ['ms', 1_000_000n],
-      ['us', 1_000n],
-      ['ns', 1n],
+      ['h', 3_600_000_000_000_000n],
+      ['m', 60_000_000_000_000n],
+      ['s', 1_000_000_000_000n],
+      ['ms', 1_000_000_000n],
+      ['us', 1_000_000n],
+      ['ns', 1_000n],
+      ['ps', 1n],
     ];
     unitAndValue.forEach(([unit, unitSize]) => {
       if (duration >= unitSize) {
@@ -240,19 +238,21 @@ export class Timecode {
   public readonly millis: string;
   public readonly micros: string;
   public readonly nanos: string;
+  public readonly picos: string;
 
   constructor(time: time) {
     this.sign = time < 0 ? '-' : '';
 
     const absTime = BigintMath.abs(time);
 
-    const days = (absTime / 86_400_000_000_000n);
-    const hours = (absTime / 3_600_000_000_000n) % 24n;
-    const minutes = (absTime / 60_000_000_000n) % 60n;
-    const seconds = (absTime / 1_000_000_000n) % 60n;
-    const millis = (absTime / 1_000_000n) % 1_000n;
-    const micros = (absTime / 1_000n) % 1_000n;
-    const nanos = absTime % 1_000n;
+    const days = (absTime / 86_400_000_000_000_000n);
+    const hours = (absTime / 3_600_000_000_000_000n) % 24n;
+    const minutes = (absTime / 60_000_000_000_000n) % 60n;
+    const seconds = (absTime / 1_000_000_000_000n) % 60n;
+    const millis = (absTime / 1_000_000_000n) % 1_000n;
+    const micros = (absTime / 1_000_000n) % 1_000n;
+    const nanos = (absTime / 1_000n) % 1_000n;
+    const picos = absTime % 1_000n;
 
     this.days = days.toString();
     this.hours = hours.toString().padStart(2, '0');
@@ -261,6 +261,7 @@ export class Timecode {
     this.millis = millis.toString().padStart(3, '0');
     this.micros = micros.toString().padStart(3, '0');
     this.nanos = nanos.toString().padStart(3, '0');
+    this.picos = picos.toString().padStart(3,'0');
   }
 
   // Get the upper part of the timecode formatted as: [-]DdHH:MM:SS.
@@ -272,7 +273,7 @@ export class Timecode {
   // Get the subsecond part of the timecode formatted as: mmm uuu nnn.
   // The "space" char is configurable but defaults to a normal space.
   subsec(spaceChar: string = ' '): string {
-    return `${this.millis}${spaceChar}${this.micros}${spaceChar}${this.nanos}`;
+    return `${this.millis}${spaceChar}${this.micros}${spaceChar}${this.nanos}${spaceChar}${this.picos}`;
   }
 
   // Formats the entire timecode to a string.

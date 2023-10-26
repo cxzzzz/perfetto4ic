@@ -92,7 +92,7 @@ export class AggregationPanel implements
       case 'STRING':
         return data.strings[data.columns[columnIndex].data[rowIndex]];
       case 'TIMESTAMP_NS':
-        return `${data.columns[columnIndex].data[rowIndex] / 1000000}`;
+        return `${data.columns[columnIndex].data[rowIndex] / 1000}`;
       case 'STATE': {
         const concatState =
             data.strings[data.columns[columnIndex].data[rowIndex]];

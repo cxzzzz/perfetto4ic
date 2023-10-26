@@ -15,7 +15,7 @@
  */
 
 import {Actions} from '../common/actions';
-import {DEFAULT_CHANNEL, getCurrentChannel} from '../common/channels';
+//import {DEFAULT_CHANNEL, getCurrentChannel} from '../common/channels';
 import {Engine} from '../common/engine';
 import {featureFlags} from '../common/feature_flags';
 import {ColumnType, STR} from '../common/query_result';
@@ -40,7 +40,7 @@ export const PIVOT_TABLE_REDUX_FLAG = featureFlags.register({
   name: 'Pivot tables V2',
   description: 'Second version of pivot table',
   // Enabled in canary and autopush by default.
-  defaultValue: getCurrentChannel() !== DEFAULT_CHANNEL,
+  defaultValue: true,
 });
 
 function expectNumber(value: ColumnType): number {

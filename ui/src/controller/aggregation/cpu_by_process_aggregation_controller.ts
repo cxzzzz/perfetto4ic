@@ -79,14 +79,14 @@ export class CpuByProcessAggregationController extends AggregationController {
         columnId: 'pid',
       },
       {
-        title: 'Wall duration (ms)',
+        title: 'Wall duration (ns)',
         kind: 'TIMESTAMP_NS',
         columnConstructor: Float64Array,
         columnId: 'total_dur',
         sum: true,
       },
       {
-        title: 'Avg Wall duration (ms)',
+        title: 'Avg Wall duration (ns)',
         kind: 'TIMESTAMP_NS',
         columnConstructor: Float64Array,
         columnId: 'avg_dur',

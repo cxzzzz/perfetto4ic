@@ -39,7 +39,7 @@ const OVERVIEW_PANEL_FLAG = featureFlags.register({
   id: 'overviewVisible',
   name: 'Overview Panel',
   description: 'Show the panel providing an overview of the trace',
-  defaultValue: true,
+  defaultValue: false,
 });
 
 // Checks if the mousePos is within 3px of the start or end of the
