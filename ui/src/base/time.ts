@@ -187,7 +187,7 @@ export class Duration {
   // Print duration as as human readable string - i.e. to only a handful of
   // significant figues.
   // Use this when readability is more desireable than precision.
-  // Examples: 1234 -> 1.23ps
+  // Examples: 1234 -> 123.4ns
   //           123456789 -> 123us
   static humanise(dur: duration) {
     const sec = Duration.toSeconds(dur);

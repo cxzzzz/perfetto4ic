@@ -53,6 +53,7 @@ export class SliceAggregationController extends AggregationController {
         name,
         sum(dur) AS total_dur,
         sum(dur)/count(1) as avg_dur,
+        format("%.4f%%", sum(dur)*100/${area.end - area.start}) as duty,
         count(1) as occurrences
         FROM slices
         WHERE track_id IN (${selectedTrackIds}) AND
@@ -82,14 +83,14 @@ export class SliceAggregationController extends AggregationController {
         columnId: 'name',
       },
       {
-        title: 'Wall duration (ns)',
+        title: 'Sum duration (ns)',
         kind: 'TIMESTAMP_NS',
         columnConstructor: Float64Array,
         columnId: 'total_dur',
         sum: true,
       },
       {
-        title: 'Avg Wall duration (ns)',
+        title: 'Avg duration (ns)',
         kind: 'TIMESTAMP_NS',
         columnConstructor: Float64Array,
         columnId: 'avg_dur',
@@ -100,6 +101,12 @@ export class SliceAggregationController extends AggregationController {
         columnConstructor: Uint32Array,
         columnId: 'occurrences',
         sum: true,
+      },
+      {
+        title: 'Duty',
+        kind: 'STRING',
+        columnConstructor: Uint32Array,
+        columnId: 'duty',
       },
     ];
   }
