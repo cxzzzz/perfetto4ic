@@ -171,7 +171,7 @@ export abstract class AggregationController extends Controller<'main'> {
         `select ifnull(sum(${def.columnId}), 0) as s from ${this.kind}`);
     let sum = result.firstRow({s: NUM}).s;
     if (def.kind === 'TIMESTAMP_NS') {
-      sum = sum / 1e6;
+      sum = sum / 1e3;
     }
     return `${sum}`;
   }
