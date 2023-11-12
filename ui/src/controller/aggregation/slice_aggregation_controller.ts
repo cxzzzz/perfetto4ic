@@ -50,15 +50,23 @@ export class SliceAggregationController extends AggregationController {
 
     const query = `create view ${this.kind} as
         SELECT
-        name,
-        sum(dur) AS total_dur,
-        sum(dur)/count(1) as avg_dur,
-        format("%.4f%%", sum(dur)*100/${area.end - area.start}) as duty,
-        count(1) as occurrences
-        FROM slices
-        WHERE track_id IN (${selectedTrackIds}) AND
-        ts + dur > ${area.start} AND
-        ts < ${area.end} group by name`;
+        (case when (name==thread_name) then name 
+            else (thread_name||" "||name) end) as alias,
+        sum(selected_dur) AS total_dur,
+        sum(selected_dur)/count(1) as avg_dur,
+        format("%.4f%%", sum(selected_dur)*100/${area.end - area.start}) as duty,
+        count(1) as occurrences, 
+        round((sum(selected_dur)+0.0)/clk_freq,0) as sum_selected_cycle,
+        round(round(sum(selected_dur)/(clk_freq+0.0),0)/count(1),4) as avg_selected_cycle,
+        round((${area.end} - ${area.start})/clk_freq,0) as cycle
+        FROM (
+          SELECT *,
+            args.int_value as clk_freq,
+            (min(ts + dur, ${area.end}) - max(ts,${area.start})) as selected_dur
+            FROM experimental_slice_with_thread_and_process_info LEFT JOIN args on ((("args."||experimental_slice_with_thread_and_process_info.name) == args.key) OR (("args."||experimental_slice_with_thread_and_process_info.thread_name) == args.key))
+            WHERE track_id IN (${selectedTrackIds}) AND (NOT (ts > ${area.end} OR ts + dur < ${area.start}))
+        )
+        group by name`;
 
     await engine.query(query);
     return true;
@@ -80,20 +88,13 @@ export class SliceAggregationController extends AggregationController {
         title: 'Name',
         kind: 'STRING',
         columnConstructor: Uint32Array,
-        columnId: 'name',
+        columnId: 'alias',
       },
       {
-        title: 'Sum duration (ns)',
-        kind: 'TIMESTAMP_NS',
+        title: 'Cycle',
+        kind: 'NUMBER',
         columnConstructor: Float64Array,
-        columnId: 'total_dur',
-        sum: true,
-      },
-      {
-        title: 'Avg duration (ns)',
-        kind: 'TIMESTAMP_NS',
-        columnConstructor: Float64Array,
-        columnId: 'avg_dur',
+        columnId: 'cycle',
       },
       {
         title: 'Occurrences',
@@ -103,7 +104,35 @@ export class SliceAggregationController extends AggregationController {
         sum: true,
       },
       {
-        title: 'Duty',
+        title: 'Sum duration (ns)',
+        kind: 'TIMESTAMP_NS',
+        columnConstructor: Float64Array,
+        columnId: 'total_dur',
+        sum: true,
+      },
+      {
+        title: 'Sum duration (cycle)',
+        kind: 'NUMBER',
+        columnConstructor: Float64Array,
+        columnId: 'sum_selected_cycle',
+        sum: true,
+      },
+      {
+        title: 'Avg duration (ns)',
+        kind: 'TIMESTAMP_NS',
+        columnConstructor: Float64Array,
+        columnId: 'avg_dur',
+        sum: true,
+      },
+      {
+        title: 'Avg duration (cycle)',
+        kind: 'NUMBER',
+        columnConstructor: Float64Array,
+        columnId: 'avg_selected_cycle',
+        sum: true,
+      },
+      {
+        title: 'Duty (%)',
         kind: 'STRING',
         columnConstructor: Uint32Array,
         columnId: 'duty',

@@ -43,28 +43,40 @@ export class CounterAggregationController extends AggregationController {
     const query = `create view ${this.kind} as select
     name,
     count(1) as count,
-    round(sum(weighted_value)/${duration}, 2) as avg_value,
+    sum(weighted_value)/${duration} as avg_value,
+    sum(weighted_value)/sum(selected_dur_wo_0) as avg_value_wo_0,
     last as last_value,
     first as first_value,
     max(last) - min(first) as delta_value,
     round((max(last) - min(first))/${durationSec}, 2) as rate,
     min(value) as min_value,
-    max(value) as max_value
-    from
-        (select *,
-        (min(ts + dur, ${area.end}) - max(ts,${area.start}))
-        * value as weighted_value,
-        first_value(value) over
-        (partition by track_id order by ts) as first,
-        last_value(value) over
-        (partition by track_id order by ts
-            range between unbounded preceding and unbounded following) as last
-        from experimental_counter_dur
-        where track_id in (${trackIds})
-        and ts + dur >= ${area.start} and
-        ts <= ${area.end})
-    join counter_track
-    on track_id = counter_track.id
+    max(value) as max_value,
+    sum(selected_cycle) as sum_selected_cycle,
+    sum(selected_cycle_value) as sum_cycle_value,
+    round((${area.end} - ${area.start})/clk_freq,0) as cycle
+    from (select * ,
+        selected_dur*value as weighted_value,
+        round(selected_dur/(clk_freq+0.0),0) as selected_cycle,
+        (case when value!=0 then round(selected_dur/(clk_freq+0.0),0) 
+          else 0 end) as selected_cycle_wo_0,
+        (case when value!=0 then selected_dur else 0 end) as selected_dur_wo_0,
+        value*round(selected_dur/(clk_freq+0.0),0) as selected_cycle_value
+        from (select *,
+          (min(ts + dur, ${area.end}) - max(ts,${area.start})) as selected_dur,
+          first_value(value) over
+          (partition by track_id order by ts) as first,
+          last_value(value) over
+          (partition by track_id order by ts
+              range between unbounded preceding and unbounded following) as last,
+          args.int_value as clk_freq,
+          (min(ts + dur, ${area.end}) - max(ts,${area.start})) as real_dur
+          from experimental_counter_dur 
+            join counter_track on track_id = counter_track.id 
+            left join args on ("args."||counter_track.name) == args.key
+          where (track_id in (${trackIds}))
+          and (NOT (ts > ${area.end} OR ts + dur < ${area.start}))
+        )
+    )
     group by track_id`;
 
     await engine.query(query);
@@ -80,6 +92,13 @@ export class CounterAggregationController extends AggregationController {
         columnId: 'name',
       },
       {
+        title: 'Cycle',
+        kind: 'NUMBER',
+        columnConstructor: Float64Array,
+        columnId: 'cycle',
+
+      },
+      /*{
         title: 'Delta value',
         kind: 'NUMBER',
         columnConstructor: Float64Array,
@@ -90,31 +109,29 @@ export class CounterAggregationController extends AggregationController {
         kind: 'Number',
         columnConstructor: Float64Array,
         columnId: 'rate',
-      },
+      },*/
       {
         title: 'Weighted avg value',
         kind: 'Number',
         columnConstructor: Float64Array,
         columnId: 'avg_value',
+        sum: true
       },
       {
-        title: 'Count',
+        title: 'Weighted avg value(w/o 0)',
         kind: 'Number',
         columnConstructor: Float64Array,
-        columnId: 'count',
-        sum: true,
+        columnId: 'avg_value_wo_0',
+        sum: true
       },
       {
-        title: 'First value',
-        kind: 'NUMBER',
+        title: 'Sum value',
+        kind: 'Number',
         columnConstructor: Float64Array,
-        columnId: 'first_value',
-      },
-      {
-        title: 'Last value',
-        kind: 'NUMBER',
-        columnConstructor: Float64Array,
-        columnId: 'last_value',
+        columnId: 'sum_cycle_value',
+        sum: true
+        
+
       },
       {
         title: 'Min value',
@@ -127,6 +144,18 @@ export class CounterAggregationController extends AggregationController {
         kind: 'NUMBER',
         columnConstructor: Float64Array,
         columnId: 'max_value',
+      },      
+      {
+        title: 'First value',
+        kind: 'NUMBER',
+        columnConstructor: Float64Array,
+        columnId: 'first_value',
+      },
+      {
+        title: 'Last value',
+        kind: 'NUMBER',
+        columnConstructor: Float64Array,
+        columnId: 'last_value',
       },
 
     ];
