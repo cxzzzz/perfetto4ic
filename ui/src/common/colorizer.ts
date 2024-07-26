@@ -193,7 +193,7 @@ export function colorCompare(x: Color, y: Color) {
 
 export function getColorForSlice(
     sliceName: string, hasFocus: boolean|null): Color {
-  const name = sliceName.replace(/( )?\d+/g, '');
+  const name = sliceName.replace(/( )+/g, '');
   const [hue, saturation, lightness] = hslForSlice(name, hasFocus);
 
   return {
